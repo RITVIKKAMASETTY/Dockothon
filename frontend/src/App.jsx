@@ -13,6 +13,7 @@ import DoctorProfile from './pages/doctor/DoctorProfile';
 import PatientDashboard from './pages/patient/PatientDashboard';
 import PatientProfile from './pages/patient/PatientProfile';
 import DoctorsList from './pages/patient/DoctorsList';
+import CreateEntry from './pages/patient/CreateEntry';
 
 import './App.css';
 
@@ -70,6 +71,14 @@ function App() {
                 element={
                   <ProtectedRoute allowedRoles={['patient']}>
                     <DoctorsList />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/patient/create-entry"
+                element={
+                  <ProtectedRoute allowedRoles={['patient']}>
+                    <CreateEntry />
                   </ProtectedRoute>
                 }
               />

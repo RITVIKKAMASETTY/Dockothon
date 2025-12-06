@@ -41,4 +41,26 @@ export const patientAPI = {
   deleteAccount: () => api.delete('/patient/me'),
 };
 
+// Entry API
+export const entryAPI = {
+  create: (data) => api.post('/entry/', data),
+  getMyEntries: () => api.get('/entry/my-entries'),
+  getEntry: (id) => api.get(`/entry/${id}`),
+};
+
+// Report API
+export const reportAPI = {
+  create: (data) => api.post('/report/', data),
+  getForEntry: (entryId) => api.get(`/report/entry/${entryId}`),
+  delete: (id) => api.delete(`/report/${id}`),
+};
+
+// Analysis API
+export const analysisAPI = {
+  createOrUpdate: (data) => api.post('/analysis/', data),
+  getForEntry: (entryId) => api.get(`/analysis/entry/${entryId}`),
+  delete: (entryId) => api.delete(`/analysis/entry/${entryId}`),
+  runAnalysis: (entryId) => api.post(`/analysis/run/${entryId}`),
+};
+
 export default api;

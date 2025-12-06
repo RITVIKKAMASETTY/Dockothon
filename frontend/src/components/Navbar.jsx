@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import './Navbar.css';
 
 const Navbar = () => {
-  const { isAuthenticated, isDoctor, isPatient, logout, user } = useAuth();
+  const { isAuthenticated, isDoctor, isPatient, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -42,6 +42,7 @@ const Navbar = () => {
               {isPatient && (
                 <>
                   <Link to="/patient/dashboard" className="nav-link">Dashboard</Link>
+                  <Link to="/patient/create-entry" className="nav-link">New Entry</Link>
                   <Link to="/patient/profile" className="nav-link">Profile</Link>
                   <Link to="/doctors" className="nav-link">Find Doctors</Link>
                 </>

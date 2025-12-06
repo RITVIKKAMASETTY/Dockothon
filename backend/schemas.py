@@ -131,3 +131,103 @@ class SignupResponse(BaseModel):
     user_id: int
     role: str
 
+
+# ============ Entry Schemas ============
+class EntryCreate(BaseModel):
+    """Schema for creating a new entry."""
+    doctor_id: str | int  # Accept both string and int for BigInt compatibility
+    top_view_url: Optional[str] = None
+    bottom_view_url: Optional[str] = None
+    amount_voided: Optional[float] = None
+    diameter_of_commode: Optional[float] = None
+    notes: Optional[str] = None
+    
+    @property
+    def doctor_id_int(self) -> int:
+        """Return doctor_id as integer."""
+        return int(self.doctor_id)
+
+
+class EntryResponse(BaseModel):
+    id: int
+    patient_id: int
+    doctor_id: int
+    time: datetime
+    top_view_url: Optional[str] = None
+    bottom_view_url: Optional[str] = None
+    amount_voided: Optional[float] = None
+    diameter_of_commode: Optional[float] = None
+    notes: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class EntryWithDetails(EntryResponse):
+    """Entry with patient and doctor details."""
+    doctor: DoctorResponse
+    patient: PatientResponse
+
+    class Config:
+        from_attributes = True
+
+
+# ============ Report Schemas ============
+class ReportCreate(BaseModel):
+    """Schema for creating a new report."""
+    entry_id: str | int  # Accept both string and int for BigInt compatibility
+    report_url: Optional[str] = None
+    report_type: str  # e.g., "diagnosis", "prescription", "lab_results"
+    title: str
+    description: Optional[str] = None
+
+
+class ReportResponse(BaseModel):
+    id: int
+    entry_id: int
+    report_url: Optional[str] = None
+    report_type: str
+    title: str
+    description: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class EntryWithReports(EntryResponse):
+    """Entry with patient details and reports."""
+    patient: PatientResponse
+    reports: list[ReportResponse] = []
+
+    class Config:
+        from_attributes = True
+
+
+# ============ Analysis Schemas ============
+class AnalysisCreate(BaseModel):
+    """Schema for creating/updating an analysis."""
+    entry_id: str | int  # Accept both for BigInt compatibility
+    annotated_video_url: Optional[str] = None
+    clinical_report_url: Optional[str] = None
+    flow_timeseries_url: Optional[str] = None
+    qmax_report_json: Optional[str] = None  # JSON string
+
+
+class AnalysisResponse(BaseModel):
+    id: int
+    entry_id: int
+    annotated_video_url: Optional[str] = None
+    clinical_report_url: Optional[str] = None
+    flow_timeseries_url: Optional[str] = None
+    qmax_report_json: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+
+

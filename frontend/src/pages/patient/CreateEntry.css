@@ -1,0 +1,103 @@
+.create-entry-card {
+  max-width: 700px;
+}
+
+.doctor-search-container {
+  position: relative;
+}
+
+.search-dropdown {
+  position: relative;
+}
+
+.search-input {
+  width: 100%;
+}
+
+.dropdown-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 2px solid #e1e5eb;
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 100;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.dropdown-item {
+  padding: 12px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background 0.2s;
+}
+
+.dropdown-item:hover {
+  background: #f8f9fa;
+}
+
+.dropdown-item.selected {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.dropdown-item.selected .doctor-meta,
+.dropdown-item.selected .doctor-spec {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.dropdown-item.no-results {
+  color: #666;
+  cursor: default;
+}
+
+.dropdown-item.no-results:hover {
+  background: white;
+}
+
+.doctor-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.doctor-name {
+  font-weight: 600;
+  color: inherit;
+}
+
+.doctor-spec {
+  font-size: 0.85rem;
+  color: #667eea;
+}
+
+.doctor-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.auto-accept-badge {
+  background: #10b981;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.profile-form textarea {
+  resize: vertical;
+  min-height: 80px;
+}

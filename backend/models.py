@@ -73,7 +73,8 @@ class Entry(Base):
     patient_id = Column(Integer, ForeignKey("patients.id"), nullable=False)
     doctor_id = Column(Integer, ForeignKey("doctors.id"), nullable=False)
     time = Column(DateTime, default=datetime.utcnow, nullable=False)
-    video_url = Column(String(500), nullable=True)
+    top_view_url = Column(String(500), nullable=True)
+    bottom_view_url = Column(String(500), nullable=True)
     amount_voided = Column(Float, nullable=True)  # Amount in ml or appropriate unit
     diameter_of_commode = Column(Float, nullable=True)  # Diameter in cm or appropriate unit
     notes = Column(Text, nullable=True)
@@ -84,6 +85,7 @@ class Entry(Base):
     patient = relationship("Patient", back_populates="entries")
     doctor = relationship("Doctor", back_populates="entries")
     reports = relationship("Report", back_populates="entry")
+    analysis = relationship("Analysis", back_populates="entry", uselist=False)
 
 
 class Report(Base):
@@ -101,3 +103,20 @@ class Report(Base):
 
     # Relationships
     entry = relationship("Entry", back_populates="reports")
+
+
+class Analysis(Base):
+    """Analysis table with 1:1 relationship to Entry for ML/video analysis results."""
+    __tablename__ = "analyses"
+
+    id = Column(Integer, primary_key=True, index=True)
+    entry_id = Column(Integer, ForeignKey("entries.id"), unique=True, nullable=False)
+    annotated_video_url = Column(String(500), nullable=True)
+    clinical_report_url = Column(String(500), nullable=True)
+    flow_timeseries_url = Column(String(500), nullable=True)
+    qmax_report_json = Column(Text, nullable=True)  # Store JSON as text
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    entry = relationship("Entry", back_populates="analysis")
