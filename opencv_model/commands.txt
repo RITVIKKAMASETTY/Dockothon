@@ -1,0 +1,59 @@
+# Commands for Uroflow Analysis System
+# Optimized with ROI Locking and Width-Based Stream Segmentation
+
+# 1. Single View Analysis (Top Camera) - RECOMMENDED
+# Uses advanced stream segmentation with ROI locking and hand removal
+# Volume 369ml normalizes the flow curve to match actual voided volume
+python scripts/run_analysis.py \
+    --top-video data/top.mp4 \
+    --calibration-image data/top.png \
+    --output-dir outputs/ \
+    --volume 369
+
+# 2. Single View Analysis (Side Camera)
+# Alternative view if top camera is unavailable
+python scripts/run_analysis.py \
+    --side-video data/side.mp4 \
+    --calibration-image data/top.png \
+    --output-dir outputs_side/ \
+    --volume 369
+
+# 3. Dual-View Ensemble Analysis
+# Combines both camera views with confidence-weighted fusion
+# Provides most robust results when both views available
+python scripts/run_analysis.py \
+    --top-video data/top.mp4 \
+    --side-video data/side.mp4 \
+    --calibration-image data/top.png \
+    --output-dir outputs_ensemble/ \
+    --volume 369
+
+# 4. Analysis Without Volume Normalization
+# Outputs raw flow estimates without scaling to manual volume
+python scripts/run_analysis.py \
+    --top-video data/top.mp4 \
+    --calibration-image data/top.png \
+    --output-dir outputs_raw/
+
+# 5. Custom FPS Override
+# Use when video metadata FPS is incorrect
+python scripts/run_analysis.py \
+    --top-video data/top.mp4 \
+    --calibration-image data/top.png \
+    --output-dir outputs/ \
+    --volume 369 \
+    --fps-override 30
+
+# Output Files Generated:
+# - annotated_top.mp4 / annotated_side.mp4: Visualization with stream overlay
+# - clinical_report.png: Dual-panel clinical report
+# - flow_timeseries.csv: Frame-by-frame flow data
+# - qmax_report.json: Summary metrics
+
+# Key Features:
+# - ROI Locking: Automatically tracks stream position
+# - Width-Based Gating: Removes hand and body artifacts
+# - Geometric Filtering: Distinguishes stream from background
+# - Volume Normalization: Scales to actual voided volume
+# - Clinical Metrics: Qmax, Average Flow, Timing parameters
+
