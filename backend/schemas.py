@@ -187,9 +187,11 @@ class ReportResponse(BaseModel):
     id: int
     entry_id: int
     report_url: Optional[str] = None
-    report_type: str
-    title: str
+    report_type: Optional[str] = None
+    title: Optional[str] = None
     description: Optional[str] = None
+    markdown_content: Optional[str] = None
+    is_ai_generated: bool = False
     created_at: datetime
 
     class Config:

@@ -41,6 +41,63 @@ def download_video(url: str, local_path: str) -> bool:
         return False
 
 
+def convert_to_browser_compatible(input_path: str, output_path: str) -> bool:
+    """
+    Convert video to browser-compatible format using FFmpeg.
+    Uses H.264 codec which is universally supported by browsers.
+    """
+    import subprocess
+    
+    try:
+        # Try to get FFmpeg from imageio-ffmpeg (bundled)
+        try:
+            import imageio_ffmpeg
+            ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
+        except ImportError:
+            ffmpeg_path = 'ffmpeg'  # Fallback to system FFmpeg
+        
+        # FFmpeg command to convert to H.264
+        # -y: overwrite output
+        # -i: input file
+        # -c:v libx264: H.264 video codec
+        # -preset fast: encoding speed/quality tradeoff
+        # -crf 23: quality (lower = better, 23 is default)
+        # -pix_fmt yuv420p: Required for browser compatibility
+        # -movflags +faststart: optimize for web streaming
+        # -an: No audio (original video has no audio)
+        cmd = [
+            ffmpeg_path, '-y',
+            '-i', input_path,
+            '-c:v', 'libx264',
+            '-preset', 'fast',
+            '-crf', '23',
+            '-pix_fmt', 'yuv420p',
+            '-movflags', '+faststart',
+            '-an',
+            output_path
+        ]
+        
+        print(f"Converting video to browser format: {input_path} -> {output_path}")
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        
+        if result.returncode != 0:
+            print(f"FFmpeg error: {result.stderr}")
+            return False
+            
+        print(f"Video conversion successful: {output_path}")
+        return True
+        
+    except subprocess.TimeoutExpired:
+        print("FFmpeg conversion timed out")
+        return False
+    except FileNotFoundError:
+        print("FFmpeg not found. Please install FFmpeg or imageio-ffmpeg.")
+        return False
+    except Exception as e:
+        print(f"Video conversion error: {e}")
+        return False
+
+
 def process_single_video(video_path, output_dir, view_name="top", fps_override=None):
     """
     Runs the CV pipeline on a single video.
@@ -208,8 +265,17 @@ def run_analysis_for_entry(
             annotated_video = bottom_result['annotated_video']
             
         if annotated_video and os.path.exists(annotated_video):
-            upload_result = upload_video(annotated_video, folder=f"{folder}/videos")
-            result["annotated_video_url"] = upload_result.get("url")
+            # Convert to browser-compatible format (H.264)
+            converted_video = os.path.join(temp_dir, "annotated_browser.mp4")
+            if convert_to_browser_compatible(annotated_video, converted_video):
+                # Upload the converted video
+                upload_result = upload_video(converted_video, folder=f"{folder}/videos")
+                result["annotated_video_url"] = upload_result.get("url")
+            else:
+                # Fallback: try uploading original (may not play in browser)
+                print("Warning: Uploading original video (may not be browser-compatible)")
+                upload_result = upload_video(annotated_video, folder=f"{folder}/videos")
+                result["annotated_video_url"] = upload_result.get("url")
         
         # Upload clinical report image
         if os.path.exists(plot_path):

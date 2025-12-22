@@ -8,6 +8,7 @@ from routers.patient_router import router as patient_router
 from routers.entry_router import router as entry_router
 from routers.report_router import router as report_router
 from routers.analysis_router import router as analysis_router
+from routers.chat_router import router as chat_router
 from fastapi.middleware.cors import CORSMiddleware
 
 class BigIntJSONEncoder(json.JSONEncoder):
@@ -66,6 +67,7 @@ app.include_router(patient_router)
 app.include_router(entry_router)
 app.include_router(report_router)
 app.include_router(analysis_router)
+app.include_router(chat_router)
 
 
 @app.get("/")

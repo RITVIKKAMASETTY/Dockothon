@@ -427,6 +427,9 @@ const DoctorDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [videoModalUrl, setVideoModalUrl] = useState(null);
+  const [reportGenerating, setReportGenerating] = useState(false);
+  const [markdownPreview, setMarkdownPreview] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -525,6 +528,39 @@ const DoctorDashboard = () => {
     } catch {
       setError('Failed to delete report');
     }
+  };
+
+  const handleGenerateReport = async () => {
+    if (!selectedEntry) return;
+    
+    setReportGenerating(true);
+    setError('');
+    
+    try {
+      await reportAPI.generate(selectedEntry.id);
+      setSuccess('AI Report generated successfully!');
+      // Refresh reports list
+      const reportsRes = await reportAPI.getForEntry(selectedEntry.id);
+      setReports(reportsRes.data);
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Failed to generate report');
+    } finally {
+      setReportGenerating(false);
+    }
+  };
+
+  const handleDownloadMarkdown = (report) => {
+    if (!report.markdown_content) return;
+    const blob = new Blob([report.markdown_content], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `report-${report.id}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const formatDate = (dateStr) => {
@@ -891,24 +927,43 @@ const DoctorDashboard = () => {
                         })()}
 
                         {/* Analysis Links */}
-                        <div className="space-y-2">
+                        <div className="space-y-4">
                           {analysis.annotated_video_url && (
-                            <a
-                              href={analysis.annotated_video_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center justify-between p-3 bg-gray-50 hover:bg-blue-50 rounded-lg border border-gray-200 hover:border-blue-200 transition-all duration-300 group"
-                            >
-                              <div className="flex items-center space-x-3">
-                                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                                  <span className="text-blue-600">🎬</span>
-                                </div>
-                                <span className="font-medium text-gray-900 group-hover:text-blue-700">
-                                  Annotated Video
-                                </span>
+                            <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                              <h4 className="font-medium text-gray-900 mb-3 flex items-center">
+                                <span className="mr-2">🎬</span> Annotated Video
+                              </h4>
+                              <div className="relative rounded-lg overflow-hidden bg-black">
+                                <video
+                                  src={analysis.annotated_video_url}
+                                  controls
+                                  className="w-full max-h-[300px] object-contain"
+                                  onError={(e) => {
+                                    console.error('Video failed to load:', e);
+                                  }}
+                                >
+                                  <source src={analysis.annotated_video_url} type="video/mp4" />
+                                  <source src={analysis.annotated_video_url} type="video/webm" />
+                                  Your browser does not support the video tag.
+                                </video>
                               </div>
-                              <span className="text-gray-400 group-hover:text-blue-600">→</span>
-                            </a>
+                              <div className="mt-3 flex items-center justify-between">
+                                <button
+                                  onClick={() => setVideoModalUrl(analysis.annotated_video_url)}
+                                  className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center"
+                                >
+                                  <span className="mr-1">🔍</span> View Fullscreen
+                                </button>
+                                <a
+                                  href={analysis.annotated_video_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-sm text-gray-500 hover:text-gray-700 flex items-center"
+                                >
+                                  <span className="mr-1">↗</span> Open in New Tab
+                                </a>
+                              </div>
+                            </div>
                           )}
                           
                           {analysis.clinical_report_url && (
@@ -965,16 +1020,35 @@ const DoctorDashboard = () => {
                 {/* Reports Card */}
                 <div className="bg-white rounded-2xl shadow-lg border border-gray-100">
                   <div className="p-6 border-b border-gray-100">
-                    <div className="flex justify-between items-center">
+                    <div className="flex justify-between items-center flex-wrap gap-2">
                       <h2 className="text-xl font-bold text-gray-900">
                         Medical Reports <span className="text-gray-500">({reports.length})</span>
                       </h2>
-                      <button
-                        onClick={() => setShowReportModal(true)}
-                        className="px-4 py-2 bg-[rgb(193,218,216)] text-gray-900 rounded-lg hover:bg-[rgb(175,205,203)] transition-colors duration-300 font-medium"
-                      >
-                        + Add Report
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleGenerateReport}
+                          disabled={reportGenerating}
+                          className="px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-lg hover:shadow-md transition-all duration-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                        >
+                          {reportGenerating ? (
+                            <>
+                              <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                              Generating...
+                            </>
+                          ) : (
+                            <>🤖 Generate AI Report</>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => setShowReportModal(true)}
+                          className="px-4 py-2 bg-[rgb(193,218,216)] text-gray-900 rounded-lg hover:bg-[rgb(175,205,203)] transition-colors duration-300 font-medium"
+                        >
+                          + Add Manual
+                        </button>
+                      </div>
                     </div>
                   </div>
                   <div className="p-6">
@@ -984,7 +1058,7 @@ const DoctorDashboard = () => {
                           <span className="text-2xl text-gray-400">📄</span>
                         </div>
                         <h3 className="font-medium text-gray-900 mb-2">No Reports Yet</h3>
-                        <p className="text-gray-500">Add reports to document findings</p>
+                        <p className="text-gray-500">Generate an AI report or add one manually</p>
                       </div>
                     ) : (
                       <div className="space-y-4">
@@ -992,14 +1066,17 @@ const DoctorDashboard = () => {
                           <div key={report.id} className="border border-gray-200 rounded-xl p-4 hover:border-[rgb(193,218,216)] transition-colors duration-300">
                             <div className="flex justify-between items-start mb-3">
                               <div>
-                                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                                  report.report_type === 'diagnosis' ? 'bg-blue-100 text-blue-700' :
-                                  report.report_type === 'prescription' ? 'bg-green-100 text-green-700' :
-                                  report.report_type === 'lab_results' ? 'bg-purple-100 text-purple-700' :
-                                  'bg-gray-100 text-gray-700'
-                                }`}>
-                                  {report.report_type}
-                                </span>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                                    report.report_type === 'diagnosis' ? 'bg-blue-100 text-blue-700' :
+                                    report.report_type === 'prescription' ? 'bg-green-100 text-green-700' :
+                                    report.report_type === 'lab_results' ? 'bg-purple-100 text-purple-700' :
+                                    report.report_type === 'ai_generated' ? 'bg-indigo-100 text-indigo-700' :
+                                    'bg-gray-100 text-gray-700'
+                                  }`}>
+                                    {report.report_type === 'ai_generated' ? 'Medical Report' : report.report_type}
+                                  </span>
+                                </div>
                                 <h3 className="font-bold text-gray-900 mt-2">{report.title}</h3>
                               </div>
                               <button
@@ -1012,16 +1089,32 @@ const DoctorDashboard = () => {
                             {report.description && (
                               <p className="text-gray-600 text-sm mb-3">{report.description}</p>
                             )}
-                            {report.report_url && (
-                              <a
-                                href={report.report_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center text-sm text-[rgb(193,218,216)] hover:text-emerald-400 font-medium"
-                              >
-                                View Document →
-                              </a>
-                            )}
+                            <div className="flex items-center gap-3 flex-wrap">
+                              {report.report_url && (
+                                <button
+                                  onClick={() => window.open(report.report_url, '_blank')}
+                                  className="inline-flex items-center text-sm bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1.5 rounded-lg font-medium transition-colors"
+                                >
+                                  📄 Download PDF
+                                </button>
+                              )}
+                              {report.markdown_content && (
+                                <>
+                                  <button
+                                    onClick={() => setMarkdownPreview(report.markdown_content)}
+                                    className="inline-flex items-center text-sm bg-gray-50 text-gray-600 hover:bg-gray-100 px-3 py-1.5 rounded-lg font-medium transition-colors"
+                                  >
+                                    👁️ Preview
+                                  </button>
+                                  <button
+                                    onClick={() => handleDownloadMarkdown(report)}
+                                    className="inline-flex items-center text-sm bg-gray-50 text-gray-600 hover:bg-gray-100 px-3 py-1.5 rounded-lg font-medium transition-colors"
+                                  >
+                                    ⬇️ Download MD
+                                  </button>
+                                </>
+                              )}
+                            </div>
                             <div className="text-xs text-gray-500 mt-3">
                               {new Date(report.created_at).toLocaleDateString()}
                             </div>
@@ -1134,6 +1227,85 @@ const DoctorDashboard = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Video Modal */}
+      {videoModalUrl && (
+        <div 
+          className="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-50"
+          onClick={() => setVideoModalUrl(null)}
+        >
+          <div 
+            className="relative w-full max-w-4xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setVideoModalUrl(null)}
+              className="absolute -top-12 right-0 text-white text-xl hover:text-gray-300 transition-colors duration-300 flex items-center"
+            >
+              <span className="mr-2">Close</span>
+              <span className="text-2xl">×</span>
+            </button>
+            <div className="bg-black rounded-2xl overflow-hidden shadow-2xl">
+              <video
+                src={videoModalUrl}
+                controls
+                autoPlay
+                className="w-full max-h-[80vh] object-contain"
+              >
+                <source src={videoModalUrl} type="video/mp4" />
+                <source src={videoModalUrl} type="video/webm" />
+                Your browser does not support the video tag.
+              </video>
+            </div>
+            <div className="mt-4 text-center">
+              <a
+                href={videoModalUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center text-white hover:text-[rgb(193,218,216)] transition-colors duration-300"
+              >
+                <span className="mr-2">↗</span> Open in New Tab
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Markdown Preview Modal */}
+      {markdownPreview && (
+        <div 
+          className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50"
+          onClick={() => setMarkdownPreview(null)}
+        >
+          <div 
+            className="relative w-full max-w-4xl max-h-[90vh] bg-white rounded-2xl shadow-2xl flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h3 className="text-lg font-bold text-gray-900">📄 Report Preview</h3>
+              <button
+                onClick={() => setMarkdownPreview(null)}
+                className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                ×
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto p-6">
+              <pre className="whitespace-pre-wrap font-mono text-sm text-gray-800 leading-relaxed">
+                {markdownPreview}
+              </pre>
+            </div>
+            <div className="p-4 border-t border-gray-200 flex justify-end">
+              <button
+                onClick={() => setMarkdownPreview(null)}
+                className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

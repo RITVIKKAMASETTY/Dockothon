@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { patientAPI, entryAPI, reportAPI } from '../../services/api';
+import { patientAPI, entryAPI, reportAPI, chatAPI } from '../../services/api';
 
 const PatientDashboard = () => {
   const [profile, setProfile] = useState(null);
@@ -10,6 +10,13 @@ const PatientDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  
+  // Chat state
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
+  const chatEndRef = useRef(null);
 
   useEffect(() => {
     fetchData();
@@ -48,6 +55,43 @@ const PatientDashboard = () => {
       minute: '2-digit'
     });
   };
+
+  // Chat handlers
+  const handleSendChat = async (e) => {
+    e.preventDefault();
+    if (!chatInput.trim() || !selectedEntry || chatLoading) return;
+    
+    const userMessage = { role: 'user', content: chatInput };
+    setChatMessages(prev => [...prev, userMessage]);
+    setChatInput('');
+    setChatLoading(true);
+    
+    try {
+      const response = await chatAPI.sendMessage(
+        selectedEntry.id,
+        chatInput,
+        chatMessages
+      );
+      setChatMessages(prev => [...prev, { role: 'assistant', content: response.data.response }]);
+    } catch {
+      setChatMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: 'Sorry, I could not process your request. Please try again.' 
+      }]);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages]);
+
+  // Reset chat when entry changes
+  useEffect(() => {
+    setChatMessages([]);
+    setChatOpen(false);
+  }, [selectedEntry]);
 
   if (loading) return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -386,9 +430,10 @@ const PatientDashboard = () => {
                                     report.report_type === 'diagnosis' ? 'bg-blue-100 text-blue-700' :
                                     report.report_type === 'prescription' ? 'bg-green-100 text-green-700' :
                                     report.report_type === 'lab_results' ? 'bg-purple-100 text-purple-700' :
+                                    report.report_type === 'ai_generated' ? 'bg-indigo-100 text-indigo-700' :
                                     'bg-gray-100 text-gray-700'
                                   }`}>
-                                    {report.report_type}
+                                    {report.report_type === 'ai_generated' ? 'Medical Report' : report.report_type}
                                   </span>
                                   <h4 className="font-bold text-gray-900 mt-2">{report.title}</h4>
                                 </div>
@@ -399,16 +444,34 @@ const PatientDashboard = () => {
                               {report.description && (
                                 <p className="text-gray-600 text-sm mb-3">{report.description}</p>
                               )}
-                              {report.report_url && (
-                                <a
-                                  href={report.report_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center text-sm text-[rgb(193,218,216)] hover:text-emerald-400 font-medium"
-                                >
-                                  View Document →
-                                </a>
-                              )}
+                              <div className="flex items-center gap-3 flex-wrap">
+                                {report.report_url && (
+                                  <button
+                                    onClick={() => window.open(report.report_url, '_blank')}
+                                    className="inline-flex items-center text-sm bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1.5 rounded-lg font-medium transition-colors"
+                                  >
+                                    📄 Download PDF
+                                  </button>
+                                )}
+                                {report.markdown_content && (
+                                  <button
+                                    onClick={() => {
+                                      const blob = new Blob([report.markdown_content], { type: 'text/markdown' });
+                                      const url = URL.createObjectURL(blob);
+                                      const a = document.createElement('a');
+                                      a.href = url;
+                                      a.download = `report-${report.id}.md`;
+                                      document.body.appendChild(a);
+                                      a.click();
+                                      document.body.removeChild(a);
+                                      URL.revokeObjectURL(url);
+                                    }}
+                                    className="inline-flex items-center text-sm bg-gray-50 text-gray-600 hover:bg-gray-100 px-3 py-1.5 rounded-lg font-medium transition-colors"
+                                  >
+                                    ⬇️ Download Report
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -429,6 +492,82 @@ const PatientDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Chat Widget */}
+      {selectedEntry && reports.length > 0 && (
+        <>
+          {/* Chat Toggle Button */}
+          <button
+            onClick={() => setChatOpen(!chatOpen)}
+            className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center z-40"
+          >
+            {chatOpen ? '✕' : '💬'}
+          </button>
+
+          {/* Chat Window */}
+          {chatOpen && (
+            <div className="fixed bottom-24 right-6 w-96 h-[500px] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col z-40 overflow-hidden">
+              <div className="p-4 bg-gradient-to-r from-indigo-500 to-purple-500 text-white">
+                <h3 className="font-bold">Ask About Your Report</h3>
+                <p className="text-sm text-indigo-100">Ask questions about your medical report</p>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {chatMessages.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    <span className="text-4xl mb-4 block">💬</span>
+                    <p>Ask me anything about your report!</p>
+                    <p className="text-sm mt-2">Example: "What does Qmax mean?"</p>
+                  </div>
+                )}
+                {chatMessages.map((msg, idx) => (
+                  <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[80%] p-3 rounded-xl ${
+                      msg.role === 'user' 
+                        ? 'bg-indigo-500 text-white rounded-br-none' 
+                        : 'bg-gray-100 text-gray-800 rounded-bl-none'
+                    }`}>
+                      <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                    </div>
+                  </div>
+                ))}
+                {chatLoading && (
+                  <div className="flex justify-start">
+                    <div className="bg-gray-100 p-3 rounded-xl rounded-bl-none">
+                      <div className="flex space-x-1">
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <div ref={chatEndRef} />
+              </div>
+              
+              <form onSubmit={handleSendChat} className="p-4 border-t border-gray-200">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    placeholder="Type your question..."
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                    disabled={chatLoading}
+                  />
+                  <button
+                    type="submit"
+                    disabled={chatLoading || !chatInput.trim()}
+                    className="px-4 py-2 bg-indigo-500 text-white rounded-xl hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Send
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 };

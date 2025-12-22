@@ -94,10 +94,12 @@ class Report(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     entry_id = Column(Integer, ForeignKey("entries.id"), nullable=False)
-    report_url = Column(String(500), nullable=False)
-    report_type = Column(String(50), nullable=True)  # e.g., 'analysis', 'summary', 'detailed'
+    report_url = Column(String(500), nullable=True)  # URL to PDF (optional if markdown only)
+    report_type = Column(String(50), nullable=True)  # e.g., 'analysis', 'summary', 'detailed', 'ai_generated'
     title = Column(String(200), nullable=True)
     description = Column(Text, nullable=True)
+    markdown_content = Column(Text, nullable=True)  # Store markdown content
+    is_ai_generated = Column(Boolean, default=False, nullable=False)  # Flag for AI-generated reports
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

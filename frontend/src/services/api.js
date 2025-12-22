@@ -43,7 +43,18 @@ export const patientAPI = {
 
 // Entry API
 export const entryAPI = {
-  create: (data) => api.post('/entry/', data),
+  create: (data) => {
+    // If data is FormData, we need to remove the Content-Type header
+    // so axios can set it automatically with the correct boundary
+    if (data instanceof FormData) {
+      return api.post('/entry/', data, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+    }
+    return api.post('/entry/', data);
+  },
   getMyEntries: () => api.get('/entry/my-entries'),
   getEntry: (id) => api.get(`/entry/${id}`),
 };
@@ -53,6 +64,7 @@ export const reportAPI = {
   create: (data) => api.post('/report/', data),
   getForEntry: (entryId) => api.get(`/report/entry/${entryId}`),
   delete: (id) => api.delete(`/report/${id}`),
+  generate: (entryId) => api.post(`/report/generate/${entryId}`),
 };
 
 // Analysis API
@@ -61,6 +73,12 @@ export const analysisAPI = {
   getForEntry: (entryId) => api.get(`/analysis/entry/${entryId}`),
   delete: (entryId) => api.delete(`/analysis/entry/${entryId}`),
   runAnalysis: (entryId) => api.post(`/analysis/run/${entryId}`),
+};
+
+// Chat API
+export const chatAPI = {
+  sendMessage: (entryId, message, history = []) => 
+    api.post('/chat/report', { entry_id: entryId, message, history }),
 };
 
 export default api;
