@@ -82,6 +82,9 @@ The system follows a **modular three-tier architecture**:
 
 ---
 
+You can view our presentation here: [PPT](https://www.canva.com/design/DAG6zEvXlAw/TAUY-AFKJ-kQWfvMN8cXGQ/edit?utm_medium=link2&utm_source=sharebutton)
+
+
 ## ✨ Key Features
 
 ### 🎯 Advanced Stream Segmentation
